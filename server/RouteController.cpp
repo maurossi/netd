@@ -756,17 +756,28 @@ WARN_UNUSED_RESULT int modifyPhysicalNetwork(unsigned netId, const char* interfa
     }
 
     if (int ret = modifyIncomingPacketMark(netId, interface, permission, add)) {
+        ALOGE("DDS: modifyIncomingPacketMark failed with error: %s", strerror(-ret));
         return ret;
     }
     if (int ret = modifyExplicitNetworkRule(netId, table, permission, INVALID_UID, INVALID_UID,
                                             add)) {
-        return ret;
+        ALOGE("DDS: modifyExplicitNetworkRule failed with error: %s", strerror(-ret));
+	return ret;
     }
-    if (int ret = modifyOutputInterfaceRules(interface, table, permission, INVALID_UID, INVALID_UID,
+   /* DDS: HACK ! This can sometimes fail on latest kernels, leading to a non-working network. Disable validation for now, until we find a better fix. */
+   if (int ret = modifyOutputInterfaceRules(interface, table, permission, INVALID_UID, INVALID_UID,
                                             add)) {
-        return ret;
+        ALOGE("DDS: modifyOutputInterfaceRules failed with error: %s, ignoring this.", strerror(-ret));
+    //  return ret;
     }
-    return modifyImplicitNetworkRule(netId, table, permission, add);
+
+   int ret2 = modifyImplicitNetworkRule(netId, table, permission, add);
+
+   if (ret2) {
+      ALOGE("DDS: modifyImplicitNetworkRule failed with error: %s", strerror(-ret2));
+   }
+
+   return ret2;
 }
 
 WARN_UNUSED_RESULT int modifyRejectNonSecureNetworkRule(const UidRanges& uidRanges, bool add) {
